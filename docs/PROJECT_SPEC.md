@@ -21,6 +21,23 @@ Current minimum supported runtime:
 
 - Python `3.9+`
 
+### 1.1 Implementation Progress
+
+Completed in the current milestone set:
+
+- provider-neutral normalized market-data contract
+- swappable `file` and `sqlite` storage backends
+- per-run and aggregate logging
+- canonical daily run selection metadata across repeated runs
+- structured validation metadata for signals and runs
+- signal-cutoff-stable feature computation for intraday and daily context
+
+Still expected in later milestones:
+
+- richer evaluation against realized outcomes
+- manual canonical override workflow
+- additional providers beyond `yfinance`
+
 ## 2. Core Objective
 
 Build a once-per-day, on-demand trading aid for morning options decision-making on a selected watchlist.
@@ -103,6 +120,7 @@ Default config path:
 Required example shape:
 
 ```toml
+[settings]
 tickers = ["TSLA", "NVDA", "UBER", "MSFT", "GOOGL", "ORCL", "PLTR"]
 benchmark_primary = "QQQ"
 benchmark_secondary = "SPY"
@@ -112,31 +130,38 @@ lookback_days_intraday = 20
 lookback_days_daily = 10
 engine_version = "0.1.0"
 config_version = "2"
+data_provider = "yfinance"
+storage_type = "file"
+logging_dir = "logs"
+bullish_threshold = 3
+bearish_threshold = -3
+vwap_band_pct = 0.15
+strong_move_pct = 0.75
+relative_strength_pct = 0.30
+volume_multiple_threshold = 1.5
 
-[provider]
-name = "yfinance"
-
-[storage]
-kind = "file"
+[storage.file]
 target = "output/runs"
 
-[logging]
-directory = "logs"
-aggregate_filename = "opx_runs.log"
+[providers.yfinance]
+interval = "5m"
 ```
 
 The config loader is responsible for:
 
-- watchlist selection through `tickers`
+- watchlist selection through `settings.tickers`
 - benchmark selection
 - signal time
 - bar interval
 - intraday and daily lookback windows
 - active data provider
-- scoring thresholds and weights
+- active data provider selection through `settings.data_provider`
+- provider-specific configuration under `providers.<provider_name>`
+- scoring thresholds and weights as flat settings keys
 - engine version and config version
-- persistence settings
-- logging settings
+- storage backend selection such as `storage_type`
+- backend-specific storage settings under `storage.<backend>`
+- logging settings such as `logging_dir`
 
 Rules:
 
@@ -145,6 +170,10 @@ Rules:
 - startup output should make the resolved runtime settings visible
 - secrets must never live in tracked repo files
 - repo examples may live under `config/`, but the default operational config lives under the user config directory
+- application-wide runtime configuration should live under `[settings]`
+- runtime settings under `[settings]` should be flattened rather than nested into `settings.storage` or `settings.logging`
+- backend-specific config should move into backend-specific tables such as `[storage.file]`
+- provider-specific settings must be namespaced so multiple providers can coexist in one config without key collisions
 
 ## 5. Current Product Scope
 
@@ -221,6 +250,7 @@ Provider rules:
 - leave unavailable data blank or mark the ticker unavailable rather than invent values
 - keep raw provider payload capture optional for debugging
 - document provider-specific warnings in the README and related docs
+- provider-specific config should live under a namespaced table such as `[providers.yfinance]`
 
 ### 7.3 YFinance Provider
 

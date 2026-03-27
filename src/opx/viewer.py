@@ -38,12 +38,16 @@ def _flatten_batches(batches) -> pd.DataFrame:
                     "run_id": batch.run.run_id,
                     "run_timestamp": batch.run.run_timestamp,
                     "provider_name": batch.run.provider_name,
+                    "selection_status": batch.run.selection_status,
+                    "run_validation_state": batch.run.validation_state,
+                    "completion_rate": batch.run.completion_rate,
                     "ticker": signal.ticker,
                     "status": signal.status,
                     "bias": signal.bias,
                     "confidence": signal.confidence,
                     "regime": signal.regime,
                     "raw_score": signal.raw_score,
+                    "signal_validation_state": signal.validation_state,
                 }
             )
     return pd.DataFrame(rows).sort_values(["ticker", "run_timestamp"])
@@ -52,6 +56,13 @@ def _flatten_batches(batches) -> pd.DataFrame:
 def _print_summary(frame: pd.DataFrame) -> None:
     available = frame[frame["status"] == "ok"]
     print(f"runs={frame['run_id'].nunique()} tickers={frame['ticker'].nunique()} signals={len(frame)}")
+    canonical = frame[frame["selection_status"].isin(["canonical", "partial_canonical"])]
+    if not canonical.empty:
+        print(
+            "canonical_runs="
+            f"{canonical['run_id'].nunique()} partial_canonical_runs="
+            f"{canonical[canonical['selection_status'] == 'partial_canonical']['run_id'].nunique()}"
+        )
     if not available.empty:
         grouped = available.groupby("ticker").agg(
             avg_confidence=("confidence", "mean"),

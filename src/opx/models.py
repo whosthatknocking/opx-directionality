@@ -27,6 +27,16 @@ class NormalizedMarketData:
 
 
 @dataclass(frozen=True)
+class ValidationIssue:
+    stage: str
+    code: str
+    message: str
+
+    def to_dict(self) -> dict[str, str]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class FeatureSet:
     gap_pct: float
     first_5m_return: float
@@ -77,6 +87,8 @@ class SignalResult:
     factor_summary: list[dict[str, str | int]]
     status: str = "ok"
     reason: str | None = None
+    validation_state: str = "valid"
+    validation_issues: list[dict[str, str]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -88,11 +100,19 @@ class SignalResult:
 class SignalRunRecord:
     run_id: str
     run_timestamp: datetime
+    trade_date: str
     signal_time_et: str
     provider_name: str
     engine_version: str
     config_version: str
+    config_fingerprint: str
     tickers: list[str]
+    signal_time_reached: bool
+    completion_rate: float = 0.0
+    validation_state: str = "valid"
+    validation_issues: list[dict[str, str]] = field(default_factory=list)
+    selection_status: str = "candidate"
+    selection_reason: str = "awaiting_canonical_selection"
     log_path: str | None = None
 
     def to_dict(self) -> dict[str, Any]:

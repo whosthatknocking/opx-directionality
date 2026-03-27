@@ -23,10 +23,13 @@ def build_feature_set(
 
     signal_bar = _slice_to_signal_time(intraday_frame, signal_timestamp)
     today = signal_bar[signal_bar.index.date == signal_timestamp.astimezone(EASTERN).date()]
+    completed_daily = _completed_daily_history(daily_frame, signal_timestamp)
     if len(today) < 3:
         raise ValueError("not enough bars before signal time")
+    if len(completed_daily) < 6:
+        raise ValueError("not enough completed daily history before signal time")
 
-    prior_close = float(daily_frame["close"].iloc[-2])
+    prior_close = float(completed_daily["close"].iloc[-1])
     open_price = float(today["open"].iloc[0])
     last_close = float(today["close"].iloc[-1])
     first_3 = today.iloc[:3]
@@ -41,9 +44,9 @@ def build_feature_set(
     body_ratio = abs(float(first_3["close"].iloc[-1]) - open_price) / range_15
     cumulative_volume = float(today["volume"].sum())
 
-    avg_first_15m_return, avg_first_15m_volume, avg_trend_persistence = _historical_intraday_averages(intraday_frame)
-    atr = _average_true_range(daily_frame, window=5)
-    recent_move = float(daily_frame["close"].iloc[-1] - daily_frame["close"].iloc[-4])
+    avg_first_15m_return, avg_first_15m_volume, avg_trend_persistence = _historical_intraday_averages(signal_bar)
+    atr = _average_true_range(completed_daily, window=5)
+    recent_move = float(completed_daily["close"].iloc[-1] - completed_daily["close"].iloc[-4])
     intraday_high = float(today["high"].max())
     intraday_low = float(today["low"].min())
 
@@ -63,14 +66,14 @@ def build_feature_set(
         gap_hold_or_fade=_gap_behavior(open_price, prior_close, last_close),
         candle_body_to_range_ratio=body_ratio,
         intraday_high_low_position=(last_close - intraday_low) / max(intraday_high - intraday_low, 1e-9),
-        previous_day_return=_pct_change(float(daily_frame["close"].iloc[-2]), float(daily_frame["close"].iloc[-3])),
+        previous_day_return=_pct_change(float(completed_daily["close"].iloc[-1]), float(completed_daily["close"].iloc[-2])),
         previous_day_close_location_in_range=_close_location(
-            float(daily_frame["close"].iloc[-2]),
-            float(daily_frame["high"].iloc[-2]),
-            float(daily_frame["low"].iloc[-2]),
+            float(completed_daily["close"].iloc[-1]),
+            float(completed_daily["high"].iloc[-1]),
+            float(completed_daily["low"].iloc[-1]),
         ),
-        three_day_return=_pct_change(float(daily_frame["close"].iloc[-1]), float(daily_frame["close"].iloc[-4])),
-        five_day_return=_pct_change(float(daily_frame["close"].iloc[-1]), float(daily_frame["close"].iloc[-6])),
+        three_day_return=_pct_change(float(completed_daily["close"].iloc[-1]), float(completed_daily["close"].iloc[-4])),
+        five_day_return=_pct_change(float(completed_daily["close"].iloc[-1]), float(completed_daily["close"].iloc[-6])),
         atr_normalized_recent_move=recent_move / max(atr, 1e-9),
         average_first_15m_return=avg_first_15m_return,
         average_first_15m_volume=avg_first_15m_volume,
@@ -102,6 +105,11 @@ def _slice_to_signal_time(frame: pd.DataFrame, signal_timestamp: datetime) -> pd
 def _select_day(frame: pd.DataFrame, signal_timestamp: datetime) -> pd.DataFrame:
     sliced = _slice_to_signal_time(frame, signal_timestamp)
     return sliced[sliced.index.date == signal_timestamp.astimezone(EASTERN).date()]
+
+
+def _completed_daily_history(frame: pd.DataFrame, signal_timestamp: datetime) -> pd.DataFrame:
+    trade_date = signal_timestamp.astimezone(EASTERN).date()
+    return frame[frame.index.date < trade_date]
 
 
 def _pct_change(value: float, base: float) -> float:

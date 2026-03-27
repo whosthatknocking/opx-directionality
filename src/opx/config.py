@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +43,10 @@ class LoggingConfig:
 @dataclass(frozen=True)
 class ProviderConfig:
     name: str = "yfinance"
+    settings: dict[str, Any] | None = None
+
+    def selected_settings(self) -> dict[str, Any]:
+        return dict(self.settings or {})
 
 
 @dataclass(frozen=True)
@@ -64,25 +70,46 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> EngineConfig:
     config_path = Path(path).expanduser()
     raw = _load_toml(config_path)
 
-    scoring = ScoringConfig(**_section(raw, "scoring"))
-    provider = ProviderConfig(**_section(raw, "provider"))
-    storage = StorageConfig(**_section(raw, "storage"))
-    logging = LoggingConfig(**_section(raw, "logging"))
+    settings = _section(raw, "settings")
+    scoring = ScoringConfig(
+        bullish_threshold=int(settings.get("bullish_threshold", 3)),
+        bearish_threshold=int(settings.get("bearish_threshold", -3)),
+        vwap_band_pct=float(settings.get("vwap_band_pct", 0.15)),
+        strong_move_pct=float(settings.get("strong_move_pct", 0.75)),
+        relative_strength_pct=float(settings.get("relative_strength_pct", 0.30)),
+        volume_multiple_threshold=float(settings.get("volume_multiple_threshold", 1.5)),
+    )
+    providers_section = _section(raw, "providers")
+    provider_name = str(settings.get("data_provider", "yfinance"))
+    provider = ProviderConfig(
+        name=provider_name,
+        settings=_provider_settings(providers_section, provider_name),
+    )
+    storage_sections = _section(raw, "storage")
+    storage_kind = str(settings.get("storage_type", "file"))
+    storage_settings = _named_settings(storage_sections, storage_kind)
+    storage = StorageConfig(
+        kind=storage_kind,
+        target=str(storage_settings.get("target", _default_storage_target(storage_kind))),
+    )
+    logging = LoggingConfig(
+        directory=str(settings.get("logging_dir", "logs")),
+    )
 
-    tickers = raw.get("tickers", raw.get("watchlist", []))
+    tickers = settings.get("tickers", settings.get("watchlist", []))
     if not tickers:
         raise ValueError(f"config at {config_path} must define tickers")
 
     return EngineConfig(
         tickers=[str(ticker).upper() for ticker in tickers],
-        benchmark_primary=str(raw.get("benchmark_primary", "QQQ")).upper(),
-        benchmark_secondary=str(raw.get("benchmark_secondary", "SPY")).upper(),
-        signal_time_et=str(raw.get("signal_time_et", "09:45")),
-        bar_interval=str(raw.get("bar_interval", "5m")),
-        lookback_days_intraday=int(raw.get("lookback_days_intraday", 20)),
-        lookback_days_daily=int(raw.get("lookback_days_daily", 10)),
-        engine_version=str(raw.get("engine_version", "0.1.0")),
-        config_version=str(raw.get("config_version", "2")),
+        benchmark_primary=str(settings.get("benchmark_primary", "QQQ")).upper(),
+        benchmark_secondary=str(settings.get("benchmark_secondary", "SPY")).upper(),
+        signal_time_et=str(settings.get("signal_time_et", "09:45")),
+        bar_interval=str(settings.get("bar_interval", "5m")),
+        lookback_days_intraday=int(settings.get("lookback_days_intraday", 20)),
+        lookback_days_daily=int(settings.get("lookback_days_daily", 10)),
+        engine_version=str(settings.get("engine_version", "0.1.0")),
+        config_version=str(settings.get("config_version", "2")),
         provider=provider,
         storage=storage,
         logging=logging,
@@ -104,6 +131,32 @@ def _section(raw: dict[str, Any], name: str) -> dict[str, Any]:
     return section
 
 
+def config_fingerprint(config: EngineConfig) -> str:
+    payload = {
+        "tickers": config.tickers,
+        "benchmark_primary": config.benchmark_primary,
+        "benchmark_secondary": config.benchmark_secondary,
+        "signal_time_et": config.signal_time_et,
+        "bar_interval": config.bar_interval,
+        "lookback_days_intraday": config.lookback_days_intraday,
+        "lookback_days_daily": config.lookback_days_daily,
+        "engine_version": config.engine_version,
+        "config_version": config.config_version,
+        "provider_name": config.provider.name,
+        "provider_settings": config.provider.selected_settings(),
+        "scoring": {
+            "bullish_threshold": config.scoring.bullish_threshold,
+            "bearish_threshold": config.scoring.bearish_threshold,
+            "vwap_band_pct": config.scoring.vwap_band_pct,
+            "strong_move_pct": config.scoring.strong_move_pct,
+            "relative_strength_pct": config.scoring.relative_strength_pct,
+            "volume_multiple_threshold": config.scoring.volume_multiple_threshold,
+        },
+    }
+    encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:16]
+
+
 def _load_simple_toml(path: Path) -> dict[str, Any]:
     root: dict[str, Any] = {}
     current = root
@@ -113,7 +166,7 @@ def _load_simple_toml(path: Path) -> dict[str, Any]:
             continue
         if line.startswith("[") and line.endswith("]"):
             name = line[1:-1].strip()
-            current = root.setdefault(name, {})
+            current = _nested_section(root, name)
             continue
         if "=" not in line:
             raise ValueError(f"invalid config line: {raw_line}")
@@ -138,3 +191,33 @@ def _parse_scalar(value: str) -> Any:
         return int(stripped)
     except ValueError:
         return stripped
+
+
+def _provider_settings(raw: dict[str, Any], provider_name: str) -> dict[str, Any]:
+    selected = raw.get(provider_name, {})
+    if not isinstance(selected, dict):
+        raise ValueError(f"config section [providers.{provider_name}] must be a table")
+    return dict(selected)
+
+
+def _named_settings(raw: dict[str, Any], name: str) -> dict[str, Any]:
+    selected = raw.get(name, {})
+    if not isinstance(selected, dict):
+        raise ValueError(f"config section [{name}] must be a table")
+    return dict(selected)
+
+
+def _default_storage_target(storage_kind: str) -> str:
+    if storage_kind == "sqlite":
+        return "output/signals.db"
+    return "output/runs"
+
+
+def _nested_section(root: dict[str, Any], dotted_name: str) -> dict[str, Any]:
+    current = root
+    for part in dotted_name.split("."):
+        existing = current.setdefault(part, {})
+        if not isinstance(existing, dict):
+            raise ValueError(f"config section [{dotted_name}] conflicts with scalar value")
+        current = existing
+    return current

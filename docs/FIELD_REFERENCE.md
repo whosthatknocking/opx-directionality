@@ -13,11 +13,20 @@
 
 - `run_id`: unique identifier for one engine run
 - `run_timestamp`: wall-clock timestamp when the run started
+- `trade_date`: trade date associated with the configured signal timestamp
 - `signal_time_et`: configured signal time in Eastern Time
 - `provider_name`: provider used for the run
 - `engine_version`: engine version string recorded with the run
 - `config_version`: config contract version string
+- `config_fingerprint`: stable fingerprint of the effective signal config
+- `provider.settings`: active provider-specific config values for the selected provider, used indirectly through the config fingerprint and provider initialization
 - `tickers`: ticker list evaluated in the run
+- `signal_time_reached`: whether the run happened after the configured signal cutoff
+- `completion_rate`: fraction of configured tickers that finished with `status=ok`
+- `validation_state`: `valid`, `partial`, or `invalid`
+- `validation_issues`: structured run-level validation issues
+- `selection_status`: canonical-selection classification such as `canonical`, `partial_canonical`, `retry`, `candidate`, or `diagnostic`
+- `selection_reason`: reason attached to the current selection status
 - `log_path`: path to the detailed run log file
 
 ## Signal Fields
@@ -31,6 +40,8 @@
 - `regime`: market-condition classification for the signal
 - `option_posture`: high-level options posture suggestion
 - `raw_score`: summed rule score before mapping
+- `validation_state`: `valid`, `partial`, or `invalid`
+- `validation_issues`: structured signal-level validation issues
 - `factor_summary`: list of rule contributions with `name`, `score`, and `rationale`
 - `factors`: normalized feature dictionary used by the rule engine
 
