@@ -32,11 +32,11 @@ Completed in the current milestone set:
 - structured validation metadata for signals and runs
 - signal-cutoff-stable feature computation for intraday and daily context
 - browser-based viewer report with dataset filtering, sorting, and embedded reference docs
+- realized close-of-day evaluation for canonical runs through `opx-evaluate`
 - docs split into spec, user guide, field reference, validation strategy, and docs index
 
 Still expected in later milestones:
 
-- richer evaluation against realized outcomes
 - manual canonical override workflow
 - additional providers beyond `yfinance`
 
@@ -519,6 +519,23 @@ Evaluation rules:
 - unavailable signals should remain in the record for diagnostic value
 - evaluation should default to canonical daily runs unless the user explicitly requests all raw runs
 - the system should preserve enough metadata to compare canonical versus non-canonical reruns when needed
+- the primary implemented realized-outcome definition is close of day versus signal-time price
+
+### 15.0 Implemented Outcome Capture
+
+The current milestone stores signal-time price at run creation and uses a separate evaluation command to enrich canonical runs with realized close-of-day outcomes.
+
+Current evaluation command:
+
+- `opx-evaluate`
+
+Current persisted outcome fields:
+
+- `signal_price`
+- `realized_close`
+- `realized_return_pct`
+- `realized_outcome`
+- `directional_hit`
 
 ### 15.1 Validation Layer
 

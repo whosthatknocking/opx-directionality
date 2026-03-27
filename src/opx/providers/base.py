@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import date, datetime
 
 from opx.models import NormalizedMarketData
 
@@ -18,5 +18,9 @@ class MarketDataProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def fetch_daily(self, ticker: str) -> NormalizedMarketData:
+    def fetch_daily(
+        self,
+        ticker: str,
+        min_date: date | None = None,
+    ) -> NormalizedMarketData:
         raise NotImplementedError

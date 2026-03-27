@@ -70,6 +70,10 @@ def _flatten_batches(batches) -> pd.DataFrame:
                     "regime": signal.regime,
                     "raw_score": signal.raw_score,
                     "signal_validation_state": signal.validation_state,
+                    "signal_price": signal.signal_price,
+                    "realized_return_pct": signal.realized_return_pct,
+                    "realized_outcome": signal.realized_outcome,
+                    "directional_hit": signal.directional_hit,
                 }
             )
     return pd.DataFrame(rows).sort_values(["ticker", "run_timestamp"])
@@ -97,6 +101,10 @@ def _print_summary(frame: pd.DataFrame, report_path: Path) -> None:
 
 
 def render_html_report(frame: pd.DataFrame, storage_kind: str, storage_target: str) -> str:
+    frame = frame.copy()
+    for column in ["signal_price", "realized_return_pct", "realized_outcome", "directional_hit"]:
+        if column not in frame.columns:
+            frame[column] = None
     available = frame[frame["status"] == "ok"].copy()
     summary_rows = []
     if not available.empty:
@@ -106,6 +114,8 @@ def render_html_report(frame: pd.DataFrame, storage_kind: str, storage_target: s
             avg_raw_score=("raw_score", "mean"),
             bullish_rate=("bias", lambda values: float((values == "bullish").mean())),
             bearish_rate=("bias", lambda values: float((values == "bearish").mean())),
+            avg_realized_return_pct=("realized_return_pct", "mean"),
+            directional_hit_rate=("directional_hit", "mean"),
         )
         for _, row in grouped.reset_index().iterrows():
             summary_rows.append(
@@ -116,6 +126,8 @@ def render_html_report(frame: pd.DataFrame, storage_kind: str, storage_target: s
                     "avg_raw_score": round(float(row["avg_raw_score"]), 2),
                     "bullish_rate": round(float(row["bullish_rate"]), 2),
                     "bearish_rate": round(float(row["bearish_rate"]), 2),
+                    "avg_realized_return_pct": _round_or_none(row["avg_realized_return_pct"]),
+                    "directional_hit_rate": _round_or_none(row["directional_hit_rate"]),
                 }
             )
 
@@ -138,6 +150,9 @@ def render_html_report(frame: pd.DataFrame, storage_kind: str, storage_target: s
             "canonical_count": int(
                 frame[frame["selection_status"].isin(["canonical", "partial_canonical"])]["run_id"].nunique()
             ),
+            "evaluated_signal_count": int(frame["realized_return_pct"].notna().sum()),
+            "avg_realized_return_pct": _round_or_none(frame["realized_return_pct"].mean()),
+            "directional_hit_rate": _round_or_none(frame["directional_hit"].mean()),
             "storage_kind": storage_kind,
             "storage_target": storage_target,
         },
@@ -161,6 +176,12 @@ def _normalize_record(record: dict[str, Any]) -> dict[str, Any]:
         else:
             normalized[key] = value
     return normalized
+
+
+def _round_or_none(value: Any) -> float | None:
+    if pd.isna(value):
+        return None
+    return round(float(value), 2)
 
 
 def _load_markdown(path: Path) -> str:
@@ -290,6 +311,10 @@ def _column_descriptions() -> dict[str, str]:
         "regime": "Market-condition classification for the signal.",
         "raw_score": "Summed rule score before bias and confidence mapping.",
         "signal_validation_state": "Validation result for the ticker-level signal.",
+        "signal_price": "Observed signal-time price used as the evaluation base.",
+        "realized_return_pct": "Close-of-day return versus the signal-time price.",
+        "realized_outcome": "Outcome label derived from the realized return.",
+        "directional_hit": "Whether the realized move agreed with the bullish or bearish signal direction.",
     }
 
 
@@ -840,7 +865,7 @@ def _html_document(payload_json: str) -> str:
         </article>
         <article class="chart-card">
           <h3 class="panel-title">Ticker Summary</h3>
-          <p class="panel-note">Average score, confidence, and directional rates for successful signals.</p>
+          <p class="panel-note">Average score, confidence, realized return, and directional rates for successful signals.</p>
           <div class="table-scroll">
             <table id="summaryTable"></table>
           </div>
@@ -908,6 +933,9 @@ def _html_document(payload_json: str) -> str:
       {{ key: "confidence", label: "Confidence", numeric: true }},
       {{ key: "raw_score", label: "Raw Score", numeric: true }},
       {{ key: "regime", label: "Regime", numeric: false }},
+      {{ key: "realized_return_pct", label: "Realized Return %", numeric: true }},
+      {{ key: "realized_outcome", label: "Outcome", numeric: false }},
+      {{ key: "directional_hit", label: "Directional Hit", numeric: false }},
       {{ key: "selection_status", label: "Selection", numeric: false }},
       {{ key: "run_validation_state", label: "Run Validation", numeric: false }},
       {{ key: "signal_validation_state", label: "Signal Validation", numeric: false }},
@@ -920,6 +948,18 @@ def _html_document(payload_json: str) -> str:
     }}
 
     function fmtColumnValue(columnKey, value) {{
+      if (
+        [
+          "realized_return_pct",
+          "realized_outcome",
+          "directional_hit",
+          "avg_realized_return_pct",
+          "directional_hit_rate",
+        ].includes(columnKey)
+        && (value === null || value === undefined || value === "")
+      ) {{
+        return "pending";
+      }}
       if (columnKey === "run_timestamp" && value) {{
         const text = String(value);
         return text.replace(/\\.\\d+(?=(?:[+-]\\d\\d:\\d\\d|Z)?$)/, "");
@@ -942,6 +982,9 @@ def _html_document(payload_json: str) -> str:
         ["Tickers", summary.ticker_count],
         ["Signals", summary.signal_count],
         ["Canonical Runs", summary.canonical_count],
+        ["Evaluated Signals", fmt(summary.evaluated_signal_count)],
+        ["Avg Realized Return %", fmt(summary.avg_realized_return_pct)],
+        ["Directional Hit Rate", fmt(summary.directional_hit_rate)],
         ["Storage", `${{summary.storage_kind}} → ${{summary.storage_target}}`],
       ];
       document.getElementById("summaryCards").innerHTML = cards.map(([label, value]) => `
@@ -1339,6 +1382,8 @@ def _html_document(payload_json: str) -> str:
       {{ key: "runs", label: "Runs" }},
       {{ key: "avg_confidence", label: "Avg Confidence" }},
       {{ key: "avg_raw_score", label: "Avg Raw Score" }},
+      {{ key: "avg_realized_return_pct", label: "Avg Realized Return %" }},
+      {{ key: "directional_hit_rate", label: "Directional Hit Rate" }},
       {{ key: "bullish_rate", label: "Bullish Rate" }},
       {{ key: "bearish_rate", label: "Bearish Rate" }},
     ]);

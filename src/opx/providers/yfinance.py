@@ -2,7 +2,7 @@ from __future__ import annotations
 # pylint: disable=line-too-long
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -46,11 +46,24 @@ class YFinanceProvider(MarketDataProvider):
             raise DataUnavailableError(f"no intraday data for {ticker}")
         normalized = self._normalize_frame(frame)
         normalized = self._filter_session_hours(normalized, now)
-        return NormalizedMarketData(symbol=ticker, timeframe="intraday", provider=self.name, bars=normalized)
+        return NormalizedMarketData(
+            symbol=ticker,
+            timeframe="intraday",
+            provider=self.name,
+            bars=normalized,
+        )
 
-    def fetch_daily(self, ticker: str) -> NormalizedMarketData:
+    def fetch_daily(
+        self,
+        ticker: str,
+        min_date: date | None = None,
+    ) -> NormalizedMarketData:
         self._ensure_dependency()
-        period = f"{max(self.daily_days + 10, 30)}d"
+        days = max(self.daily_days + 10, 30)
+        if min_date is not None:
+            age_days = max((datetime.now(EASTERN).date() - min_date).days + 10, days)
+            days = age_days
+        period = f"{days}d"
         frame = yf.download(
             tickers=ticker,
             period=period,
@@ -62,7 +75,12 @@ class YFinanceProvider(MarketDataProvider):
         if frame.empty:
             raise DataUnavailableError(f"no daily data for {ticker}")
         normalized = self._normalize_frame(frame)
-        return NormalizedMarketData(symbol=ticker, timeframe="daily", provider=self.name, bars=normalized)
+        return NormalizedMarketData(
+            symbol=ticker,
+            timeframe="daily",
+            provider=self.name,
+            bars=normalized,
+        )
 
     def _normalize_frame(self, frame: pd.DataFrame) -> pd.DataFrame:
         normalized = frame.copy()

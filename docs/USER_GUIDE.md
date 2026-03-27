@@ -6,8 +6,9 @@
 2. Run `opx-directionality` after the open, typically around `09:45 ET`.
 3. Review the console summary and persisted run artifacts.
 4. If you rerun the engine in the same morning, the raw runs are preserved and canonical selection decides which run is the official daily snapshot.
-5. Use [`scripts/view_runs.py`](/Users/emt/Workspace/opx-directionality/scripts/view_runs.py) or `opx-viewer` to generate a local HTML report for comparing score, confidence, validation, and canonical-selection trends.
-6. Use `--open` if you want the generated report opened in the default browser immediately.
+5. After the market close, run `opx-evaluate` to capture realized close-of-day outcomes for canonical runs.
+6. Use [`scripts/view_runs.py`](/Users/emt/Workspace/opx-directionality/scripts/view_runs.py) or `opx-viewer` to generate a local HTML report for comparing score, confidence, validation, canonical-selection trends, and realized outcomes.
+7. Use `--open` if you want the generated report opened in the default browser immediately.
 
 Place application-wide runtime config under `[settings]` using flat keys. Select the active provider with `data_provider = "..."`, put backend-specific storage config under `[storage.<backend>]`, and place provider-specific settings under `[providers.yfinance]`.
 

@@ -40,8 +40,13 @@
 - `regime`: market-condition classification for the signal
 - `option_posture`: high-level options posture suggestion
 - `raw_score`: summed rule score before mapping
+- `signal_price`: observed signal-time price used as the evaluation base
 - `validation_state`: `valid`, `partial`, or `invalid`
 - `validation_issues`: structured signal-level validation issues
+- `realized_close`: same-day closing price used for realized-outcome evaluation
+- `realized_return_pct`: close-of-day return versus `signal_price`
+- `realized_outcome`: `positive`, `negative`, or `flat`
+- `directional_hit`: whether the realized move agreed with a bullish or bearish signal
 - `factor_summary`: list of rule contributions with `name`, `score`, and `rationale`
 - `factors`: normalized feature dictionary used by the rule engine
 

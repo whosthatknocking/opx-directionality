@@ -23,6 +23,7 @@ dev = [
 
 [project.scripts]
 opx-directionality = "opx.fetcher:main"
+opx-evaluate = "opx.evaluate:main"
 opx-viewer = "opx.viewer:main"
 
 [tool.setuptools]

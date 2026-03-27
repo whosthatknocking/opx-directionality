@@ -1,6 +1,7 @@
 from __future__ import annotations
 # pylint: disable=too-many-locals
 
+from dataclasses import replace
 from datetime import datetime
 from uuid import uuid4
 
@@ -18,6 +19,14 @@ from opx.validation import (
     validate_market_data,
     validate_signal,
 )
+
+
+def _signal_price_from_intraday(intraday, signal_timestamp: datetime) -> float:
+    frame = intraday.as_frame()
+    eligible = frame[frame["timestamp"] <= signal_timestamp]
+    if eligible.empty:
+        raise ValueError("not enough bars before signal time")
+    return float(eligible["close"].iloc[-1])
 
 
 def run_daily_engine(config: EngineConfig, now: datetime | None = None) -> BatchRunResult:
@@ -90,6 +99,10 @@ def run_daily_engine(config: EngineConfig, now: datetime | None = None) -> Batch
                 raise ValueError("; ".join(issue.message for issue in feature_issues))
 
             result = score_signal(ticker, signal_timestamp, features, config.scoring)
+            result = replace(
+                result,
+                signal_price=_signal_price_from_intraday(intraday, signal_timestamp),
+            )
             signal_issues = validate_signal(result)
             result = apply_signal_validation(result, signal_issues)
             logger.info(

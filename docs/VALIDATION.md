@@ -133,7 +133,7 @@ The goal is to determine whether failures are coming from:
 
 1. Persist all raw runs.
 2. Let canonical selection identify the official daily run.
-3. Capture realized outcomes for canonical runs.
+3. Run `opx-evaluate` to capture realized close-of-day outcomes for canonical runs.
 4. Evaluate hit rate, return distribution, and calibration by ticker, regime, and confidence.
 5. Review disagreement between canonical and non-canonical reruns.
 6. Change one variable at a time.

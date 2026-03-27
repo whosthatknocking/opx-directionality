@@ -57,11 +57,19 @@ opx-viewer --storage-kind file --storage-target output/runs
 
 By default this writes `output/viewer/index.html`. Add `--open` to launch the report in the default browser.
 
+After the market close, capture realized close-of-day outcomes for canonical runs:
+
+```bash
+opx-evaluate
+```
+
 ## Commands
 
 `opx-directionality` runs the morning fetch/score/persist pipeline.
 
 `opx-viewer` generates the HTML report from stored runs.
+
+`opx-evaluate` records realized close-of-day outcomes for canonical runs.
 
 `PYTHONPATH=src python3 -m opx.fetcher` runs the fetcher directly from the repo without installing scripts.
 

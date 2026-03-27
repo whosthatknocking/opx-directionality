@@ -36,6 +36,11 @@ class FileStoreTests(unittest.TestCase):
             raw_score=7,
             factors={"gap_pct": 1.2},
             factor_summary=[{"name": "gap_pct", "score": 2, "rationale": "gap is holding"}],
+            signal_price=101.5,
+            realized_close=103.0,
+            realized_return_pct=1.48,
+            realized_outcome="positive",
+            directional_hit=True,
         )
 
         with TemporaryDirectory() as directory:
@@ -47,6 +52,9 @@ class FileStoreTests(unittest.TestCase):
         self.assertEqual(loaded[0].run.provider_name, "yfinance")
         self.assertEqual(loaded[0].run.selection_status, "canonical")
         self.assertEqual(loaded[0].signals[0].ticker, "NVDA")
+        self.assertEqual(loaded[0].signals[0].signal_price, 101.5)
+        self.assertEqual(loaded[0].signals[0].realized_outcome, "positive")
+        self.assertTrue(loaded[0].signals[0].directional_hit)
 
     def test_later_complete_run_becomes_canonical(self) -> None:
         early = BatchRunResult(

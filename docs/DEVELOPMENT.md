@@ -29,6 +29,12 @@ Run the viewer from the installed console script:
 opx-viewer --storage-kind file --storage-target output/runs --open
 ```
 
+Capture realized close-of-day outcomes for canonical runs:
+
+```bash
+opx-evaluate
+```
+
 Run the fetcher directly from the repo without installing scripts:
 
 ```bash

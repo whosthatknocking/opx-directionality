@@ -86,10 +86,15 @@ class SignalResult:
     raw_score: int
     factors: dict[str, float | str]
     factor_summary: list[dict[str, str | int]]
+    signal_price: float | None = None
     status: str = "ok"
     reason: str | None = None
     validation_state: str = "valid"
     validation_issues: list[dict[str, str]] = field(default_factory=list)
+    realized_close: float | None = None
+    realized_return_pct: float | None = None
+    realized_outcome: str | None = None
+    directional_hit: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
