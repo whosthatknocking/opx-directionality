@@ -1,4 +1,5 @@
 from __future__ import annotations
+# pylint: disable=too-many-locals
 
 from datetime import datetime
 from uuid import uuid4
@@ -51,7 +52,7 @@ def run_daily_engine(config: EngineConfig, now: datetime | None = None) -> Batch
 
     benchmark_intraday = {}
     benchmark_issues: list[ValidationIssue] = []
-    for symbol in {config.benchmark_primary, config.benchmark_secondary}:
+    for symbol in (config.benchmark_primary, config.benchmark_secondary):
         try:
             dataset = provider.fetch_intraday(symbol, current_time)
             issues = validate_market_data(dataset, signal_timestamp, minimum_bars=3)
@@ -61,7 +62,11 @@ def run_daily_engine(config: EngineConfig, now: datetime | None = None) -> Batch
             benchmark_intraday[symbol] = dataset
         except (DataUnavailableError, ValueError) as exc:
             benchmark_issues.append(
-                ValidationIssue(stage="run", code="missing_benchmark_data", message=f"{symbol}: {exc}")
+                ValidationIssue(
+                    stage="run",
+                    code="missing_benchmark_data",
+                    message=f"{symbol}: {exc}",
+                )
             )
 
     benchmark_intraday.setdefault("QQQ", benchmark_intraday.get(config.benchmark_primary))
@@ -113,7 +118,11 @@ def run_daily_engine(config: EngineConfig, now: datetime | None = None) -> Batch
                 validation_issues=[issue.to_dict()],
             )
             result = apply_signal_validation(result, validate_signal(result))
-            logger.warning("ticker=%s status=unavailable reason=%s", ticker, exc)
+            logger.warning(
+                "ticker=%s status=unavailable reason=%s",
+                ticker,
+                exc,
+            )
         batch.signals.append(result)
 
     batch = finalize_batch_validation(batch, config, signal_timestamp, benchmark_issues)

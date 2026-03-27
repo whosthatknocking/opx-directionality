@@ -1,15 +1,8 @@
 from datetime import datetime
-from pathlib import Path
-import sys
 import unittest
 from zoneinfo import ZoneInfo
 
 import pandas as pd
-
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
 from opx.features.compute import build_feature_set
 from opx.models import NormalizedMarketData
@@ -49,7 +42,12 @@ class FeatureCutoffTests(unittest.TestCase):
             ),
         )
 
-        features = build_feature_set(intraday, daily, {"QQQ": benchmark, "SPY": benchmark}, signal_time)
+        features = build_feature_set(
+            intraday,
+            daily,
+            {"QQQ": benchmark, "SPY": benchmark},
+            signal_time,
+        )
 
         self.assertEqual(features.previous_day_return, ((100 - 98) / 98) * 100)
         self.assertEqual(features.five_day_return, ((100 - 90) / 90) * 100)

@@ -1,13 +1,8 @@
 from datetime import datetime
-from pathlib import Path
-import sys
 import unittest
 from zoneinfo import ZoneInfo
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+import pandas as pd
 
 from opx.viewer import render_html_report
 from opx.models import BatchRunResult, SignalResult, SignalRunRecord
@@ -67,8 +62,6 @@ class ViewerReportTests(unittest.TestCase):
 
 
 def _frame_from_batch(batch: BatchRunResult):
-    import pandas as pd
-
     rows = []
     for signal in batch.signals:
         rows.append(

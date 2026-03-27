@@ -1,4 +1,5 @@
 from __future__ import annotations
+# pylint: disable=too-many-locals
 
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
@@ -19,7 +20,10 @@ def build_feature_set(
 ) -> FeatureSet:
     intraday_frame = _to_indexed_frame(intraday)
     daily_frame = _to_indexed_frame(daily)
-    benchmark_frames = {symbol: _to_indexed_frame(dataset) for symbol, dataset in benchmark_intraday.items()}
+    benchmark_frames = {
+        symbol: _to_indexed_frame(dataset)
+        for symbol, dataset in benchmark_intraday.items()
+    }
 
     signal_bar = _slice_to_signal_time(intraday_frame, signal_timestamp)
     today = signal_bar[signal_bar.index.date == signal_timestamp.astimezone(EASTERN).date()]
@@ -37,14 +41,21 @@ def build_feature_set(
     qqq_day = _select_day(benchmark_frames["QQQ"], signal_timestamp)
     spy_day = _select_day(benchmark_frames["SPY"], signal_timestamp)
 
-    vwap_series = ((today["close"] * today["volume"]).cumsum() / today["volume"].replace(0, pd.NA).cumsum()).ffill()
+    vwap_series = (
+        (today["close"] * today["volume"]).cumsum()
+        / today["volume"].replace(0, pd.NA).cumsum()
+    ).ffill()
     high_15 = float(first_3["high"].max())
     low_15 = float(first_3["low"].min())
     range_15 = max(high_15 - low_15, 1e-9)
     body_ratio = abs(float(first_3["close"].iloc[-1]) - open_price) / range_15
     cumulative_volume = float(today["volume"].sum())
 
-    avg_first_15m_return, avg_first_15m_volume, avg_trend_persistence = _historical_intraday_averages(signal_bar)
+    (
+        avg_first_15m_return,
+        avg_first_15m_volume,
+        avg_trend_persistence,
+    ) = _historical_intraday_averages(signal_bar)
     atr = _average_true_range(completed_daily, window=5)
     recent_move = float(completed_daily["close"].iloc[-1] - completed_daily["close"].iloc[-4])
     intraday_high = float(today["high"].max())
@@ -59,29 +70,50 @@ def build_feature_set(
         first_10m_return=_pct_change(float(today["close"].iloc[1]), open_price),
         first_15m_return=first_15m_return,
         first_15m_range_pct=(range_15 / open_price) * 100,
-        first_15m_close_vs_open=((float(first_3["close"].iloc[-1]) - open_price) / open_price) * 100,
+        first_15m_close_vs_open=(
+            (float(first_3["close"].iloc[-1]) - open_price) / open_price
+        ) * 100,
         price_vs_vwap_pct=_pct_change(last_close, float(vwap_series.iloc[-1])),
         opening_volume_multiple=cumulative_volume / max(avg_first_15m_volume, 1.0),
         opening_range_break_status=_opening_range_break(last_close, high_15, low_15),
         gap_hold_or_fade=_gap_behavior(open_price, prior_close, last_close),
         candle_body_to_range_ratio=body_ratio,
-        intraday_high_low_position=(last_close - intraday_low) / max(intraday_high - intraday_low, 1e-9),
-        previous_day_return=_pct_change(float(completed_daily["close"].iloc[-1]), float(completed_daily["close"].iloc[-2])),
+        intraday_high_low_position=(
+            (last_close - intraday_low) / max(intraday_high - intraday_low, 1e-9)
+        ),
+        previous_day_return=_pct_change(
+            float(completed_daily["close"].iloc[-1]),
+            float(completed_daily["close"].iloc[-2]),
+        ),
         previous_day_close_location_in_range=_close_location(
             float(completed_daily["close"].iloc[-1]),
             float(completed_daily["high"].iloc[-1]),
             float(completed_daily["low"].iloc[-1]),
         ),
-        three_day_return=_pct_change(float(completed_daily["close"].iloc[-1]), float(completed_daily["close"].iloc[-4])),
-        five_day_return=_pct_change(float(completed_daily["close"].iloc[-1]), float(completed_daily["close"].iloc[-6])),
+        three_day_return=_pct_change(
+            float(completed_daily["close"].iloc[-1]),
+            float(completed_daily["close"].iloc[-4]),
+        ),
+        five_day_return=_pct_change(
+            float(completed_daily["close"].iloc[-1]),
+            float(completed_daily["close"].iloc[-6]),
+        ),
         atr_normalized_recent_move=recent_move / max(atr, 1e-9),
         average_first_15m_return=avg_first_15m_return,
         average_first_15m_volume=avg_first_15m_volume,
         average_trend_persistence=avg_trend_persistence,
-        first_15m_return_minus_qqq=first_15m_return - _benchmark_first_15m_return(qqq_day),
-        first_15m_return_minus_spy=first_15m_return - _benchmark_first_15m_return(spy_day),
-        gap_pct_minus_qqq_gap=gap_pct - _benchmark_gap(benchmark_frames["QQQ"], signal_timestamp),
-        gap_pct_minus_spy_gap=gap_pct - _benchmark_gap(benchmark_frames["SPY"], signal_timestamp),
+        first_15m_return_minus_qqq=(
+            first_15m_return - _benchmark_first_15m_return(qqq_day)
+        ),
+        first_15m_return_minus_spy=(
+            first_15m_return - _benchmark_first_15m_return(spy_day)
+        ),
+        gap_pct_minus_qqq_gap=(
+            gap_pct - _benchmark_gap(benchmark_frames["QQQ"], signal_timestamp)
+        ),
+        gap_pct_minus_spy_gap=(
+            gap_pct - _benchmark_gap(benchmark_frames["SPY"], signal_timestamp)
+        ),
     )
 
 
@@ -127,13 +159,11 @@ def _opening_range_break(last_close: float, high_15: float, low_15: float) -> st
 
 
 def _gap_behavior(open_price: float, prior_close: float, last_close: float) -> str:
-    if open_price >= prior_close and last_close >= open_price:
+    if min(open_price, last_close) >= prior_close:
         return "holding"
-    if open_price <= prior_close and last_close <= open_price:
+    if max(open_price, last_close) <= prior_close:
         return "holding"
-    if open_price >= prior_close and last_close < open_price:
-        return "fading"
-    if open_price <= prior_close and last_close > open_price:
+    if (open_price - prior_close) * (last_close - open_price) < 0:
         return "fading"
     return "mixed"
 
@@ -155,13 +185,20 @@ def _historical_intraday_averages(frame: pd.DataFrame) -> tuple[float, float, fl
             (
                 _pct_change(float(first_3["close"].iloc[-1]), float(day["open"].iloc[0])),
                 float(first_3["volume"].sum()),
-                _pct_change(float(day["close"].iloc[-1]), float(first_3["close"].iloc[-1])),
+                _pct_change(
+                    float(day["close"].iloc[-1]),
+                    float(first_3["close"].iloc[-1]),
+                ),
             )
         )
     if not grouped:
         return 0.0, 1.0, 0.0
     returns, volumes, persistence = zip(*grouped[:-1] or grouped)
-    return sum(returns) / len(returns), sum(volumes) / len(volumes), sum(persistence) / len(persistence)
+    return (
+        sum(returns) / len(returns),
+        sum(volumes) / len(volumes),
+        sum(persistence) / len(persistence),
+    )
 
 
 def _average_true_range(daily: pd.DataFrame, window: int) -> float:

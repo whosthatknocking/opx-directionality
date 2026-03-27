@@ -3,12 +3,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from zoneinfo import ZoneInfo
 import unittest
-import sys
-
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
 from opx.models import BatchRunResult, SignalResult, SignalRunRecord
 from opx.storage.file_store import FileSignalStore

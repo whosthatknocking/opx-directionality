@@ -8,7 +8,13 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from opx.config import EngineConfig
-from opx.models import BatchRunResult, FeatureSet, NormalizedMarketData, SignalResult, ValidationIssue
+from opx.models import (
+    BatchRunResult,
+    FeatureSet,
+    NormalizedMarketData,
+    SignalResult,
+    ValidationIssue,
+)
 
 
 EASTERN = ZoneInfo("America/New_York")
@@ -28,13 +34,31 @@ def validate_market_data(
     frame = dataset.as_frame()
 
     if frame.empty:
-        return [ValidationIssue(stage="data", code="empty_dataset", message=f"{dataset.symbol} returned no {dataset.timeframe} rows")]
+        return [
+            ValidationIssue(
+                stage="data",
+                code="empty_dataset",
+                message=f"{dataset.symbol} returned no {dataset.timeframe} rows",
+            )
+        ]
 
     timestamps = pd.to_datetime(frame["timestamp"])
     if timestamps.dt.tz is None:
-        issues.append(ValidationIssue(stage="data", code="naive_timestamps", message=f"{dataset.symbol} has naive timestamps"))
+        issues.append(
+            ValidationIssue(
+                stage="data",
+                code="naive_timestamps",
+                message=f"{dataset.symbol} has naive timestamps",
+            )
+        )
     if not timestamps.is_monotonic_increasing:
-        issues.append(ValidationIssue(stage="data", code="unordered_timestamps", message=f"{dataset.symbol} timestamps are not sorted"))
+        issues.append(
+            ValidationIssue(
+                stage="data",
+                code="unordered_timestamps",
+                message=f"{dataset.symbol} timestamps are not sorted",
+            )
+        )
 
     if dataset.timeframe == "intraday":
         cutoff = signal_timestamp.astimezone(EASTERN)
@@ -44,7 +68,10 @@ def validate_market_data(
                 ValidationIssue(
                     stage="data",
                     code="insufficient_intraday_bars",
-                    message=f"{dataset.symbol} has {len(available)} intraday bars before the signal cutoff",
+                    message=(
+                        f"{dataset.symbol} has {len(available)} intraday bars "
+                        "before the signal cutoff"
+                    ),
                 )
             )
     elif dataset.timeframe == "daily" and len(frame) < minimum_bars:
@@ -65,17 +92,36 @@ def validate_feature_set(features: FeatureSet) -> list[ValidationIssue]:
     for field_name, value in payload.items():
         if isinstance(value, (int, float)) and not math.isfinite(float(value)):
             issues.append(
-                ValidationIssue(stage="feature", code="non_finite_feature", message=f"{field_name} is not finite"))
+                ValidationIssue(
+                    stage="feature",
+                    code="non_finite_feature",
+                    message=f"{field_name} is not finite",
+                )
+            )
 
     if features.opening_range_break_status not in VALID_RANGE_BREAK:
         issues.append(
-            ValidationIssue(stage="feature", code="invalid_opening_range_break", message=features.opening_range_break_status)
+            ValidationIssue(
+                stage="feature",
+                code="invalid_opening_range_break",
+                message=features.opening_range_break_status,
+            )
         )
     if features.gap_hold_or_fade not in VALID_GAP_BEHAVIOR:
-        issues.append(ValidationIssue(stage="feature", code="invalid_gap_behavior", message=features.gap_hold_or_fade))
-    if not 0.0 <= features.intraday_high_low_position <= 1.0:
         issues.append(
-            ValidationIssue(stage="feature", code="intraday_position_out_of_range", message=str(features.intraday_high_low_position))
+            ValidationIssue(
+                stage="feature",
+                code="invalid_gap_behavior",
+                message=features.gap_hold_or_fade,
+            )
+        )
+    if features.intraday_high_low_position < 0.0 or features.intraday_high_low_position > 1.0:
+        issues.append(
+            ValidationIssue(
+                stage="feature",
+                code="intraday_position_out_of_range",
+                message=str(features.intraday_high_low_position),
+            )
         )
     return issues
 
@@ -89,9 +135,21 @@ def validate_signal(signal: SignalResult) -> list[ValidationIssue]:
     if signal.regime not in VALID_REGIMES:
         issues.append(ValidationIssue(stage="signal", code="invalid_regime", message=signal.regime))
     if signal.status == "unavailable" and not signal.reason:
-        issues.append(ValidationIssue(stage="signal", code="missing_unavailable_reason", message=signal.ticker))
+        issues.append(
+            ValidationIssue(
+                stage="signal",
+                code="missing_unavailable_reason",
+                message=signal.ticker,
+            )
+        )
     if not 0 <= signal.confidence <= 100:
-        issues.append(ValidationIssue(stage="signal", code="confidence_out_of_range", message=str(signal.confidence)))
+        issues.append(
+            ValidationIssue(
+                stage="signal",
+                code="confidence_out_of_range",
+                message=str(signal.confidence),
+            )
+        )
     return issues
 
 
@@ -99,7 +157,11 @@ def apply_signal_validation(signal: SignalResult, issues: list[ValidationIssue])
     if not issues:
         return signal
     state = "invalid" if signal.status == "unavailable" else "partial"
-    return replace(signal, validation_state=state, validation_issues=[issue.to_dict() for issue in issues])
+    return replace(
+        signal,
+        validation_state=state,
+        validation_issues=[issue.to_dict() for issue in issues],
+    )
 
 
 def finalize_batch_validation(
@@ -111,21 +173,35 @@ def finalize_batch_validation(
     run_issues = list(benchmark_issues)
     if not batch.run.signal_time_reached:
         run_issues.append(
-            ValidationIssue(stage="run", code="ran_before_signal_time", message=signal_timestamp.isoformat())
+            ValidationIssue(
+                stage="run",
+                code="ran_before_signal_time",
+                message=signal_timestamp.isoformat(),
+            )
         )
 
     attempted = {signal.ticker for signal in batch.signals}
     missing_tickers = sorted(set(config.tickers) - attempted)
     if missing_tickers:
         run_issues.append(
-            ValidationIssue(stage="run", code="missing_ticker_attempts", message=",".join(missing_tickers))
+            ValidationIssue(
+                stage="run",
+                code="missing_ticker_attempts",
+                message=",".join(missing_tickers),
+            )
         )
 
     ok_count = sum(1 for signal in batch.signals if signal.status == "ok")
     completion_rate = ok_count / len(config.tickers) if config.tickers else 0.0
 
     if ok_count == 0:
-        run_issues.append(ValidationIssue(stage="run", code="no_successful_signals", message=batch.run.run_id))
+        run_issues.append(
+            ValidationIssue(
+                stage="run",
+                code="no_successful_signals",
+                message=batch.run.run_id,
+            )
+        )
 
     validation_state = "valid"
     if run_issues or any(signal.validation_state != "valid" for signal in batch.signals):

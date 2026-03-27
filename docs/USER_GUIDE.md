@@ -29,5 +29,6 @@ Place application-wide runtime config under `[settings]` using flat keys. Select
 
 ## Related Docs
 
+- Docs index: [`docs/README.md`](/Users/emt/Workspace/opx-directionality/docs/README.md)
 - Product scope and architecture: [`docs/PROJECT_SPEC.md`](/Users/emt/Workspace/opx-directionality/docs/PROJECT_SPEC.md)
 - Field definitions: [`docs/FIELD_REFERENCE.md`](/Users/emt/Workspace/opx-directionality/docs/FIELD_REFERENCE.md)

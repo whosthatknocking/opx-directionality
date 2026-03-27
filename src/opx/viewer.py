@@ -1,4 +1,5 @@
 from __future__ import annotations
+# pylint: disable=too-many-lines,too-many-locals,too-many-branches,too-many-statements,line-too-long
 
 import argparse
 import json

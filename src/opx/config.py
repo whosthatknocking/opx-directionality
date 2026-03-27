@@ -1,4 +1,5 @@
 from __future__ import annotations
+# pylint: disable=too-many-instance-attributes
 
 from dataclasses import dataclass
 import hashlib
@@ -7,12 +8,12 @@ from pathlib import Path
 from typing import Any
 
 try:  # pragma: no cover - import path depends on Python version
-    import tomllib
+    import tomllib as TOML_LIB
 except ModuleNotFoundError:  # pragma: no cover
     try:
-        import tomli as tomllib
+        import tomli as TOML_LIB
     except ModuleNotFoundError:  # pragma: no cover
-        tomllib = None
+        TOML_LIB = None
 
 
 DEFAULT_CONFIG_PATH = Path("~/.config/opx-directionality/config.toml").expanduser()
@@ -118,9 +119,9 @@ def load_config(path: str | Path = DEFAULT_CONFIG_PATH) -> EngineConfig:
 
 
 def _load_toml(path: Path) -> dict[str, Any]:
-    if tomllib is not None:
+    if TOML_LIB is not None:
         with path.open("rb") as handle:
-            return tomllib.load(handle)
+            return TOML_LIB.load(handle)
     return _load_simple_toml(path)
 
 

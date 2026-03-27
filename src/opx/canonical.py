@@ -25,7 +25,10 @@ def apply_canonical_selection(batches: list[BatchRunResult]) -> list[BatchRunRes
         if winner is None:
             updated.extend(group)
             continue
-        full = winner.run.validation_state == "valid" and winner.run.completion_rate >= 1.0
+        full = (
+            winner.run.validation_state == "valid"
+            and winner.run.completion_rate >= 1.0
+        )
         reason = "earliest_complete_post_signal" if full else "best_available_partial"
         status = "canonical" if full else "partial_canonical"
 
@@ -43,10 +46,16 @@ def apply_canonical_selection(batches: list[BatchRunResult]) -> list[BatchRunRes
             loser_reason = batch.run.selection_reason
             if batch.run.signal_time_reached:
                 loser_status = "retry"
-                loser_reason = f"superseded_by={winner.run.run_id}"
+                loser_reason = (
+                    f"superseded_by={winner.run.run_id}"
+                )
             updated.append(
                 BatchRunResult(
-                    run=replace(batch.run, selection_status=loser_status, selection_reason=loser_reason),
+                    run=replace(
+                        batch.run,
+                        selection_status=loser_status,
+                        selection_reason=loser_reason,
+                    ),
                     signals=batch.signals,
                 )
             )
@@ -54,11 +63,20 @@ def apply_canonical_selection(batches: list[BatchRunResult]) -> list[BatchRunRes
 
 
 def _select_winner(group: list[BatchRunResult]) -> BatchRunResult | None:
-    eligible = [batch for batch in group if batch.run.signal_time_reached and batch.run.validation_state != "invalid"]
+    eligible = [
+        batch
+        for batch in group
+        if batch.run.signal_time_reached and batch.run.validation_state != "invalid"
+    ]
     if not eligible:
         return None
 
-    full = [batch for batch in eligible if batch.run.validation_state == "valid" and batch.run.completion_rate >= 1.0]
+    full = [
+        batch
+        for batch in eligible
+        if batch.run.validation_state == "valid"
+        and batch.run.completion_rate >= 1.0
+    ]
     if full:
         return min(full, key=lambda batch: batch.run.run_timestamp)
 

@@ -28,7 +28,10 @@ def main() -> int:
     print(render_console_report(batch))
 
     if not args.no_persist:
-        store = create_signal_store(args.storage_kind or config.storage.kind, args.storage_target or config.storage.target)
+        store = create_signal_store(
+            args.storage_kind or config.storage.kind,
+            args.storage_target or config.storage.target,
+        )
         store.initialize()
         store.save_batch(batch)
     return 0

@@ -1,4 +1,5 @@
 from __future__ import annotations
+# pylint: disable=line-too-long
 
 from dataclasses import dataclass
 from datetime import datetime
