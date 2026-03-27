@@ -1,6 +1,6 @@
 # opx-directionality
 
-`opx-directionality` is a post-open directionality engine for a fixed watchlist. It runs once after the open, normalizes provider data into one internal schema, scores each ticker with a deterministic rule engine, persists each run, and supports later multi-run review.
+`opx-directionality` is a post-open directionality engine for a fixed watchlist. It is built as one workflow with connected parts: early-session data collection, directionality scoring, and end-of-day validation. The collection stage captures a consistent snapshot of the market shortly after the open, after the initial burst of opening volatility has started to settle, so each symbol can be evaluated from a comparable morning state. The directionality stage turns that snapshot into an explainable directional read that can be used as one input within a broader discretionary or systematic options-trading process. The validation stage closes the loop after the market close by comparing that fixed morning read against the realized outcome for the same day. Taken together, these parts make the engine useful not as a complete trading system or a stream of intraday updates, but as a stable, repeatable framework for generating, tracking, and improving a post-open directional signal over time.
 
 ## Features
 
