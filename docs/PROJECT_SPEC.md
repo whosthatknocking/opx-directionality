@@ -1,4 +1,4 @@
-# Overall Project Specification: opx-directionality
+# Project Specification
 
 ## 1. Overview
 
@@ -186,7 +186,7 @@ The project currently targets:
 - rule-based scoring
 - persistence of run metadata and ticker outputs
 - later realized-outcome evaluation from stored history
-- visualization of multiple historical runs through an independent viewer script
+- visualization of multiple historical runs through an independent viewer script that produces a webpage report
 
 The project does not currently aim to:
 
@@ -595,9 +595,17 @@ Viewer requirements:
 
 - implemented as a separate script from the main CLI
 - capable of loading multiple historical runs from the configured storage backend
-- able to visualize data according to the evaluation strategy
+- able to visualize data according to the evaluation strategy as a webpage report
+- should support an `--open` option to open the generated report in the default browser
 - should support basic summary statistics across runs
 - should remain read-only with respect to stored run data
+
+Viewer design direction:
+
+- follow the institutional, ledger-inspired design system documented in the sibling OPX design spec
+- prefer borders and structural hierarchy over shadows
+- use compact, dense tables as the primary data surface
+- include a functional header, tabs, and light/dark theme toggle
 
 The viewer is intended to answer:
 

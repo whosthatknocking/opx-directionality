@@ -44,11 +44,14 @@ interval = "5m"
 opx-directionality
 ```
 
-4. Review multiple stored runs:
+4. Generate a browser-viewable report for stored runs:
 
 ```bash
 opx-viewer --storage-kind file --storage-target output/runs
 ```
+
+This writes an HTML report to `output/viewer/index.html`.
+Add `--open` to launch it in the default browser.
 
 ## Local Setup
 
@@ -121,7 +124,7 @@ Provider-specific behavior must stay inside the provider implementation. Downstr
 
 ## Viewer
 
-Use [`scripts/view_runs.py`](/Users/emt/Workspace/opx-directionality/scripts/view_runs.py) to load multiple stored runs and visualize signal quality over time.
+Use [`scripts/view_runs.py`](/Users/emt/Workspace/opx-directionality/scripts/view_runs.py) to load multiple stored runs and generate a local HTML report.
 
 Installed entry point:
 
@@ -133,6 +136,9 @@ Example:
 opx-viewer --storage-kind file --storage-target output/runs
 ```
 
+By default, the report is written to `output/viewer/index.html`.
+Use `--open` to open it automatically in the default browser.
+
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](/Users/emt/Workspace/opx-directionality/LICENSE).
@@ -142,3 +148,4 @@ This project is licensed under the MIT License. See [LICENSE](/Users/emt/Workspa
 - Install dev dependencies with `pip install -e ".[dev]"`
 - Run lint with `pylint $(git ls-files '*.py')`
 - Run tests with `pytest -q`
+- Signal-quality validation methodology: [docs/VALIDATION.md](/Users/emt/Workspace/opx-directionality/docs/VALIDATION.md)

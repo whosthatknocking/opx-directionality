@@ -45,6 +45,14 @@
 - `factor_summary`: list of rule contributions with `name`, `score`, and `rationale`
 - `factors`: normalized feature dictionary used by the rule engine
 
+## Regime Definitions
+
+- `trend_continuation`: early price action, relative strength, and opening behavior indicate a directional move is more likely to persist than mean revert
+- `choppy`: mixed or weak early signals indicate low directional conviction, range behavior, or a higher chance of false breaks
+- `mean_reversion`: opening displacement or early momentum looks stretched relative to context, increasing the chance of reversal back toward the open, VWAP, or prior range
+- `breakout_transition`: the tape is shifting from balance into expansion, but the move is not yet as established as a clean continuation regime
+- `unclassified`: no regime label was assigned because the signal was unavailable, partial, or did not meet a clear classification rule
+
 ## Feature Fields
 
 - `gap_pct`: opening gap versus the previous daily close
