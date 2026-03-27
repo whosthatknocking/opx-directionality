@@ -59,10 +59,13 @@ By default this writes `output/viewer/index.html`. Add `--open` to launch the re
 
 ## Commands
 
-- `opx-directionality`: run the morning fetch/score/persist pipeline
-- `opx-viewer`: generate the HTML report from stored runs
-- `PYTHONPATH=src python3 -m opx.fetcher`: run the fetcher directly from the repo without installing scripts
-- `PYTHONPATH=src python3 -m opx.viewer`: run the viewer directly from the repo without installing scripts
+`opx-directionality` runs the morning fetch/score/persist pipeline.
+
+`opx-viewer` generates the HTML report from stored runs.
+
+`PYTHONPATH=src python3 -m opx.fetcher` runs the fetcher directly from the repo without installing scripts.
+
+`PYTHONPATH=src python3 -m opx.viewer` runs the viewer directly from the repo without installing scripts.
 
 ## Configuration
 
@@ -87,12 +90,17 @@ interval = "5m"
 
 ## Storage And Logging
 
-- Storage backends: `file` and `sqlite`
-- File-store default target: `output/runs`
-- Aggregate run log: `logs/opx_runs.log`
-- Per-run logs: `logs/<run_id>.log`
-- Repeated same-day runs are preserved as raw runs
-- At most one run per trade date/provider/config group is promoted to `canonical` or `partial_canonical`
+Storage backends: `file` and `sqlite`.
+
+File-store default target: `output/runs`.
+
+Aggregate run log: `logs/opx_runs.log`.
+
+Per-run logs: `logs/<run_id>.log`.
+
+Repeated same-day runs are preserved as raw runs.
+
+At most one run per trade date/provider/config group is promoted to `canonical` or `partial_canonical`.
 
 ## Provider Notes
 
@@ -102,18 +110,19 @@ Providers are abstracted behind a provider interface and must emit the same norm
 
 ## Documentation
 
-- Docs index: [docs/README.md](/Users/emt/Workspace/opx-directionality/docs/README.md)
-- User workflow: [docs/USER_GUIDE.md](/Users/emt/Workspace/opx-directionality/docs/USER_GUIDE.md)
-- Product contract: [docs/PROJECT_SPEC.md](/Users/emt/Workspace/opx-directionality/docs/PROJECT_SPEC.md)
-- Field reference: [docs/FIELD_REFERENCE.md](/Users/emt/Workspace/opx-directionality/docs/FIELD_REFERENCE.md)
-- Validation strategy: [docs/VALIDATION.md](/Users/emt/Workspace/opx-directionality/docs/VALIDATION.md)
+Docs index: [docs/README.md](/Users/emt/Workspace/opx-directionality/docs/README.md).
+
+User workflow: [docs/USER_GUIDE.md](/Users/emt/Workspace/opx-directionality/docs/USER_GUIDE.md).
+
+Product contract: [docs/PROJECT_SPEC.md](/Users/emt/Workspace/opx-directionality/docs/PROJECT_SPEC.md).
+
+Field reference: [docs/FIELD_REFERENCE.md](/Users/emt/Workspace/opx-directionality/docs/FIELD_REFERENCE.md).
+
+Validation strategy: [docs/VALIDATION.md](/Users/emt/Workspace/opx-directionality/docs/VALIDATION.md).
 
 ## Development
 
-- Install dev dependencies with `pip install -e ".[dev]"`
-- Run lint with `.venv/bin/python -m pylint $(find src tests -name '*.py' | sort)`
-- Run tests with `pytest -q`
-- Regenerate the viewer with `opx-viewer --storage-kind file --storage-target output/runs --open`
+Development workflow and local quality-check commands live in [docs/DEVELOPMENT.md](/Users/emt/Workspace/opx-directionality/docs/DEVELOPMENT.md).
 
 ## License
 
