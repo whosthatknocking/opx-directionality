@@ -1,0 +1,28 @@
+tickers = ["TSLA", "NVDA", "UBER", "MSFT", "GOOGL", "ORCL", "PLTR"]
+benchmark_primary = "QQQ"
+benchmark_secondary = "SPY"
+signal_time_et = "09:45"
+bar_interval = "5m"
+lookback_days_intraday = 20
+lookback_days_daily = 10
+engine_version = "0.1.0"
+config_version = "2"
+
+[provider]
+name = "yfinance"
+
+[storage]
+kind = "file"
+target = "output/runs"
+
+[logging]
+directory = "logs"
+aggregate_filename = "opx_runs.log"
+
+[scoring]
+bullish_threshold = 3
+bearish_threshold = -3
+vwap_band_pct = 0.15
+strong_move_pct = 0.75
+relative_strength_pct = 0.30
+volume_multiple_threshold = 1.5
