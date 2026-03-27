@@ -2,6 +2,8 @@
 
 `opx-directionality` is a post-open directionality engine for a fixed watchlist. It is built as one workflow with connected parts: early-session data collection, directionality scoring, and end-of-day validation. The collection stage captures a consistent snapshot of the market shortly after the open, after the initial burst of opening volatility has started to settle, so each symbol can be evaluated from a comparable morning state. The directionality stage turns that snapshot into an explainable directional read that can be used as one input within a broader discretionary or systematic options-trading process. The validation stage closes the loop after the market close by comparing that fixed morning read against the realized outcome for the same day. Taken together, these parts make the engine useful not as a complete trading system or a stream of intraday updates, but as a stable, repeatable framework for generating, tracking, and improving a post-open directional signal over time.
 
+At a high level, the working hypothesis is that the market often reveals a usable directional bias shortly after the open once the noisiest opening imbalance begins to clear. If price position, early range behavior, and related context align in a coherent way, that early structure may contain information about how the symbol is likely to behave through the rest of the session. The engine exists to capture that hypothesis in a repeatable form, so it can be tested, challenged, and refined against realized outcomes instead of remaining a purely discretionary impression.
+
 ## Features
 
 - provider-neutral normalized market-data pipeline
@@ -123,6 +125,8 @@ Docs index: [docs/README.md](/Users/emt/Workspace/opx-directionality/docs/README
 User workflow: [docs/USER_GUIDE.md](/Users/emt/Workspace/opx-directionality/docs/USER_GUIDE.md).
 
 Product contract: [docs/PROJECT_SPEC.md](/Users/emt/Workspace/opx-directionality/docs/PROJECT_SPEC.md).
+
+Signal mechanics: [docs/SIGNAL_MECHANICS.md](/Users/emt/Workspace/opx-directionality/docs/SIGNAL_MECHANICS.md).
 
 Field reference: [docs/FIELD_REFERENCE.md](/Users/emt/Workspace/opx-directionality/docs/FIELD_REFERENCE.md).
 
