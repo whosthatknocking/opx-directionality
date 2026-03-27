@@ -31,6 +31,8 @@ Completed in the current milestone set:
 - canonical daily run selection metadata across repeated runs
 - structured validation metadata for signals and runs
 - signal-cutoff-stable feature computation for intraday and daily context
+- browser-based viewer report with dataset filtering, sorting, and embedded reference docs
+- docs split into spec, user guide, field reference, validation strategy, and docs index
 
 Still expected in later milestones:
 
@@ -593,11 +595,13 @@ The project should include a viewer feature as an additional independent Python 
 
 Viewer requirements:
 
-- implemented as a separate script from the main CLI
+- implemented as an independent viewer entry point, with a thin script wrapper allowed for convenience
 - capable of loading multiple historical runs from the configured storage backend
 - able to visualize data according to the evaluation strategy as a webpage report
 - should support an `--open` option to open the generated report in the default browser
 - should support basic summary statistics across runs
+- should support sortable dataset tables and per-column filtering in the dataset view
+- should embed local project reference documentation into the generated report when available
 - should remain read-only with respect to stored run data
 
 Viewer design direction:
@@ -622,8 +626,10 @@ Additional docs may support the project, but the spec remains the top-level sour
 Documentation requirements:
 
 - `docs/PROJECT_SPEC.md` should contain the full product and technical game plan
+- `docs/README.md` should provide a small documentation index for GitHub navigation
 - provider-specific warnings should appear in the README
 - normalized fields should be documented in `docs/FIELD_REFERENCE.md`
+- signal-quality validation methodology should live in `docs/VALIDATION.md`
 - user-facing docs should align with the tracked spec
 
 ## 18. Non-Goals For v1
