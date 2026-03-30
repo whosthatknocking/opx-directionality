@@ -298,29 +298,36 @@ def _escape_html(text: str) -> str:
 
 def _column_descriptions() -> dict[str, str]:
     return {
-        "run_timestamp": "Timestamp when the engine run started.",
-        "trade_date": "Trade date associated with the configured signal timestamp.",
-        "provider_name": "Data provider used for the run.",
-        "selection_status": "Canonical-selection classification for the run.",
-        "run_validation_state": "Validation result for the overall run.",
-        "completion_rate": "Fraction of configured tickers that completed with status ok.",
-        "ticker": "Evaluated symbol.",
-        "status": "Signal availability state for the ticker.",
-        "bias": "Directional lean produced by the rule engine.",
-        "confidence": "Confidence score from 0 to 100.",
-        "regime": "Market-condition classification for the signal.",
-        "raw_score": "Summed rule score before bias and confidence mapping.",
-        "signal_validation_state": "Validation result for the ticker-level signal.",
-        "signal_price": "Observed signal-time price used as the evaluation base.",
-        "realized_return_pct": "Close-of-day return versus the signal-time price.",
-        "realized_outcome": "Outcome label derived from the realized return.",
-        "directional_hit": "Whether the realized move agreed with the bullish or bearish signal direction.",
+        "run_timestamp": "When this stored engine run was recorded.",
+        "trade_date": "Market date the signal is being judged against.",
+        "provider_name": "Market-data source used for this run.",
+        "selection_status": "Whether this run is the canonical pick or just a retry for the same setup.",
+        "run_validation_state": "Overall data-quality result for the full run.",
+        "completion_rate": "Share of configured tickers that produced a usable signal.",
+        "ticker": "Stock symbol for this row.",
+        "status": "Whether the signal was produced successfully or the ticker was unavailable.",
+        "bias": "Directional call produced at signal time: bullish, bearish, or neutral.",
+        "confidence": "Strength of conviction on a 0 to 100 scale.",
+        "regime": "Short description of the market behavior pattern at signal time.",
+        "raw_score": "Unmapped rule score before it is translated into bias and confidence.",
+        "signal_validation_state": "Validation result for this ticker's individual signal.",
+        "signal_price": "Signal-time reference price used as the base for later outcome measurement.",
+        "realized_return_pct": "Percent move from the signal price to the close.",
+        "realized_outcome": "Direction of the realized close-versus-signal move.",
+        "directional_hit": "Whether the realized move agreed with the original bullish or bearish call.",
+        "runs": "Number of distinct stored runs that contributed to this ticker summary row.",
+        "avg_confidence": "Average confidence across successful signals for this ticker.",
+        "avg_raw_score": "Average pre-mapping rule score across successful signals for this ticker.",
+        "avg_realized_return_pct": "Average close-versus-signal return for evaluated signals.",
+        "directional_hit_rate": "Share of evaluated bullish or bearish calls that finished in the called direction.",
+        "bullish_rate": "Fraction of successful signals for this ticker that were bullish.",
+        "bearish_rate": "Fraction of successful signals for this ticker that were bearish.",
     }
 
 
 def _html_document(payload_json: str) -> str:
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -360,6 +367,7 @@ def _html_document(payload_json: str) -> str:
       font-family: "Manrope", sans-serif;
       background: var(--page-ground);
       color: var(--text-primary);
+      overflow-x: hidden;
     }}
     .page {{
       max-width: 1440px;
@@ -367,11 +375,13 @@ def _html_document(payload_json: str) -> str:
       padding: 16px;
       display: grid;
       gap: 12px;
+      min-width: 0;
     }}
     .surface {{
       background: var(--surface-primary);
       border: 1px solid var(--border);
       border-radius: var(--radius);
+      min-width: 0;
     }}
     .workspace-header {{
       display: flex;
@@ -436,6 +446,7 @@ def _html_document(payload_json: str) -> str:
     }}
     .panel {{
       padding: 12px;
+      min-width: 0;
     }}
     .panel-title {{
       margin: 0 0 4px;
@@ -510,6 +521,12 @@ def _html_document(payload_json: str) -> str:
       overflow: auto;
       border: 1px solid var(--border);
       border-radius: var(--radius);
+      width: 100%;
+      max-width: 100%;
+    }}
+    .table-inner {{
+      width: max-content;
+      min-width: 100%;
     }}
     .dataset-toolbar {{
       display: flex;
@@ -524,9 +541,14 @@ def _html_document(payload_json: str) -> str:
       font-size: 12px;
     }}
     table {{
-      width: 100%;
+      margin: 0;
       border-collapse: collapse;
       background: var(--surface-primary);
+    }}
+    #summaryTable,
+    #signalsTable {{
+      width: max-content;
+      margin: 0 auto;
     }}
     th, td {{
       padding: 10px 12px;
@@ -748,7 +770,7 @@ def _html_document(payload_json: str) -> str:
       background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
       color: var(--text-secondary);
     }}
-    .tab-panel {{ display: none; }}
+    .tab-panel {{ display: none; min-width: 0; }}
     .tab-panel.active {{ display: block; }}
     .reference-grid {{
       display: grid;
@@ -830,7 +852,7 @@ def _html_document(payload_json: str) -> str:
           <button class="tab-button" type="button" data-tab="dataset">Dataset</button>
           <button class="tab-button" type="button" data-tab="reference">Reference</button>
         </nav>
-        <button id="themeToggle" class="theme-toggle" type="button">Dark</button>
+        <button id="themeToggle" class="theme-toggle" type="button">Light</button>
       </div>
     </header>
 
@@ -867,7 +889,9 @@ def _html_document(payload_json: str) -> str:
           <h3 class="panel-title">Ticker Summary</h3>
           <p class="panel-note">Average score, confidence, realized return, and directional rates for successful signals.</p>
           <div class="table-scroll">
-            <table id="summaryTable"></table>
+            <div class="table-inner">
+              <table id="summaryTable"></table>
+            </div>
           </div>
         </article>
       </div>
@@ -880,7 +904,9 @@ def _html_document(payload_json: str) -> str:
         <div id="filterSummary" class="dataset-summary">Showing all rows.</div>
       </div>
       <div class="table-scroll">
-        <table id="signalsTable"></table>
+        <div class="table-inner">
+          <table id="signalsTable"></table>
+        </div>
       </div>
     </section>
 
@@ -1009,6 +1035,16 @@ def _html_document(payload_json: str) -> str:
         return `<td>${{fmtColumnValue(column.key, value)}}</td>`;
       }}).join("")}}</tr>`).join("")}}</tbody>`;
       table.innerHTML = head + body;
+      centerTableScroll(table);
+    }}
+
+    function centerTableScroll(table) {{
+      const scroller = table.closest(".table-scroll");
+      if (!scroller) return;
+      requestAnimationFrame(() => {{
+        const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
+        scroller.scrollLeft = maxScrollLeft > 0 ? Math.floor(maxScrollLeft / 2) : 0;
+      }});
     }}
 
     function compareValues(left, right) {{
@@ -1223,6 +1259,7 @@ def _html_document(payload_json: str) -> str:
         }});
       }});
       document.getElementById("filterSummary").textContent = `Showing ${{filtered.length}} of ${{payload.signals.length}} rows.`;
+      centerTableScroll(table);
     }}
 
     function wireFilters() {{

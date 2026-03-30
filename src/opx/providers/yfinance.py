@@ -75,6 +75,7 @@ class YFinanceProvider(MarketDataProvider):
         if frame.empty:
             raise DataUnavailableError(f"no daily data for {ticker}")
         normalized = self._normalize_frame(frame)
+        normalized["timestamp"] = self._normalize_daily_timestamps(normalized["timestamp"])
         return NormalizedMarketData(
             symbol=ticker,
             timeframe="daily",
@@ -95,6 +96,12 @@ class YFinanceProvider(MarketDataProvider):
             index = index.tz_convert(EASTERN)
         normalized = normalized.assign(timestamp=index)
         return normalized.loc[:, ["timestamp", "open", "high", "low", "close", "volume"]].reset_index(drop=True)
+
+    def _normalize_daily_timestamps(self, timestamps: pd.Series) -> pd.Series:
+        ts = pd.to_datetime(timestamps)
+        if ts.dt.hour.eq(20).all() and ts.dt.minute.eq(0).all():
+            return (ts + pd.Timedelta(days=1)).dt.normalize() + pd.Timedelta(hours=16)
+        return ts
 
     def _filter_session_hours(self, frame: pd.DataFrame, now: datetime) -> pd.DataFrame:
         if frame.empty:

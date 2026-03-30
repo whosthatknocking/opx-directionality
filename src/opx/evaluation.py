@@ -31,7 +31,7 @@ def evaluate_canonical_batches(
             signal.ticker
             for batch in canonical_batches
             for signal in batch.signals
-            if signal.status == "ok" and signal.signal_price is not None
+            if signal.status == "ok"
         }
     )
     if not tickers:
@@ -45,6 +45,15 @@ def evaluate_canonical_batches(
         ticker: provider.fetch_daily(ticker, min_date=earliest_trade_date).as_frame()
         for ticker in tickers
     }
+    intraday_cache = {
+        ticker: provider.fetch_intraday(ticker, current_time).as_frame()
+        for ticker in tickers
+        if any(
+            signal.status == "ok" and signal.signal_price is None and signal.ticker == ticker
+            for batch in canonical_batches
+            for signal in batch.signals
+        )
+    }
 
     updated = []
     canonical_ids = {batch.run.run_id for batch in canonical_batches}
@@ -56,6 +65,7 @@ def evaluate_canonical_batches(
             _evaluate_signal(
                 signal,
                 trade_date=batch.run.trade_date,
+                intraday_frame=intraday_cache.get(signal.ticker),
                 daily_frame=daily_cache.get(signal.ticker),
                 now=current_time,
             )
@@ -68,14 +78,21 @@ def evaluate_canonical_batches(
 def _evaluate_signal(
     signal: SignalResult,
     trade_date: str,
+    intraday_frame: pd.DataFrame | None,
     daily_frame: pd.DataFrame | None,
     now: datetime,
 ) -> SignalResult:
-    if signal.status != "ok" or signal.signal_price is None or daily_frame is None:
+    if signal.status != "ok" or daily_frame is None:
         return signal
 
     trade_day = date.fromisoformat(trade_date)
     if trade_day >= now.date():
+        return signal
+
+    signal_price = signal.signal_price
+    if signal_price is None:
+        signal_price = _signal_price_from_intraday(signal.signal_time, intraday_frame)
+    if signal_price is None:
         return signal
 
     matched = daily_frame[pd.to_datetime(daily_frame["timestamp"]).dt.date == trade_day]
@@ -83,14 +100,27 @@ def _evaluate_signal(
         return signal
 
     close_price = float(matched["close"].iloc[-1])
-    realized_return_pct = _pct_change(close_price, float(signal.signal_price))
+    realized_return_pct = _pct_change(close_price, float(signal_price))
     return replace(
         signal,
+        signal_price=signal_price,
         realized_close=close_price,
         realized_return_pct=realized_return_pct,
         realized_outcome=_outcome_label(realized_return_pct),
         directional_hit=_directional_hit(signal.bias, realized_return_pct),
     )
+
+
+def _signal_price_from_intraday(
+    signal_time: datetime,
+    intraday_frame: pd.DataFrame | None,
+) -> float | None:
+    if intraday_frame is None:
+        return None
+    eligible = intraday_frame[pd.to_datetime(intraday_frame["timestamp"]) <= signal_time]
+    if eligible.empty:
+        return None
+    return float(eligible["close"].iloc[-1])
 
 
 def _pct_change(value: float, base: float) -> float:
