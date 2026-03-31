@@ -91,7 +91,11 @@ class FetcherTests(unittest.TestCase):
             patch.object(fetcher, "run_daily_engine", return_value=current_batch),
             patch.object(fetcher, "render_console_report", return_value="report"),
             patch.object(fetcher, "create_signal_store", return_value=store),
-            patch.object(fetcher, "create_provider", return_value=_StaticProvider(close_price=103.0)),
+            patch.object(
+                fetcher,
+                "create_provider",
+                return_value=_StaticProvider(close_price=103.0),
+            ),
             patch("builtins.print"),
         ):
             exit_code = fetcher.main()
