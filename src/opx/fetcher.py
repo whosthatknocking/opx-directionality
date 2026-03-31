@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 
 from opx.config import DEFAULT_CONFIG_PATH, load_config
+from opx.evaluation import evaluate_canonical_batches
 from opx.pipeline import run_daily_engine
+from opx.providers import create_provider
 from opx.reports.console import render_console_report
 from opx.storage import create_signal_store
 
@@ -28,12 +30,20 @@ def main() -> int:
     print(render_console_report(batch))
 
     if not args.no_persist:
+        provider = create_provider(config)
         store = create_signal_store(
             args.storage_kind or config.storage.kind,
             args.storage_target or config.storage.target,
         )
         store.initialize()
         store.save_batch(batch)
+        evaluated = evaluate_canonical_batches(
+            store.load_batches(),
+            provider,
+            now=batch.run.run_timestamp,
+        )
+        for evaluated_batch in evaluated:
+            store.save_batch(evaluated_batch)
     return 0
 
 
